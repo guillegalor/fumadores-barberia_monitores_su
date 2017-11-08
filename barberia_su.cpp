@@ -34,7 +34,7 @@ void esperarFueraBarberia(int i){
 }
 
 void cortarPeloACliente(){
-  chrono::milliseconds duracion_esperar( aleatorio<200,500>() );
+  chrono::milliseconds duracion_esperar( aleatorio<200,300>() );
 
   mtx.lock();
   std::cout << "Barbero: Pelado trapero en camino..." << endl;
@@ -49,7 +49,7 @@ void cortarPeloACliente(){
 class Barberia : public HoareMonitor{
 private:
   int num_esperando;                                    //Número de personas en la sala de espera
-  bool cliente_en_la_silla;                             //Variable que indica si el barbero está pelando a alguien
+  bool cliente_en_la_silla, barbero_dormido;                             //Variable que indica si el barbero está pelando a alguien
   CondVar c_clientes, c_barbero, c_cliente_pelandose;   //Condiciones para barbero
 public:
   Barberia();
@@ -62,7 +62,7 @@ public:
 //Implementación de los metodos de la barbería----------------------------------
 Barberia::Barberia(){
   num_esperando = 0;
-  cliente_en_la_silla = false;
+  barbero_dormido = cliente_en_la_silla = false;
 
   c_clientes = newCondVar();
   c_barbero = newCondVar();
@@ -72,23 +72,27 @@ Barberia::Barberia(){
 void Barberia::siguienteCliente(){
   if (num_esperando == 0) {                                                     //Si no hay ningun cliente, el barbero se duerme
     std::cout << "Barbero: No hay ningun cliente, me duermo zzz..." << endl;
+    barbero_dormido = true;
     c_barbero.wait();
-    std::cout << "Barbero: Buenos días zzz..." << endl;
+    barbero_dormido = false;
+    std::cout << "Barbero: Buenos días zzz... Pase pase" << endl;
   }
+  else{
   std::cout << "Barbero: Que pase el siguiente cliente!" << endl;
-
-  c_clientes.signal();                                                          //El barbero avisa al siguiente cliente para que pase
+  c_clientes.signal();
+  }                                                          //El barbero avisa al siguiente cliente para que pase
 }
 
 void Barberia::cortarPelo(int i) {
   std::cout << "Cliente" << i << ": Buenos dias!" << endl;
-  c_barbero.signal();                                                           //El cliente despierta al barbero en caso de que este dormido
-
-  std::cout << "Cliente" << i << ": Entro a la sala de espera" << endl;         //El cliente espera a que el barberlo le de paso
-  num_esperando++;                                                              //El cliente notifica que está esperando
-  c_clientes.wait();
-
-  num_esperando--;
+  if (barbero_dormido)
+    c_barbero.signal();                                                         //El cliente despierta al barbero en caso de que este dormido
+  else{
+    std::cout << "Cliente" << i << ": Entro a la sala de espera" << endl;         //El cliente espera a que el barberlo le de paso
+    num_esperando++;                                                              //El cliente notifica que está esperando
+    c_clientes.wait();
+    num_esperando--;
+  }
   std::cout << "Cliente" << i << ": Mi turno!" << endl;
   cliente_en_la_silla = true;
   c_cliente_pelandose.wait();                                                   //El cliente espera a que el barbero le pele
