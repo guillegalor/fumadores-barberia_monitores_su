@@ -11,7 +11,8 @@ using namespace HM;
 constexpr int
   num_clientes = 7,            // número de clientes
   num_barberos = 2,            // número de barberos
-  tamanio_sala = 5;
+  max_clientes = 3,            // número maximo de clientes que puede despachar un barbero sin descansar
+  tamanio_sala = 5;            // número maximo de clientes esperando en la sala de espera
 mutex
   mtx ;                        // mutex de escritura en pantalla
 
@@ -27,11 +28,17 @@ void esperarFueraBarberia(int i){
   chrono::milliseconds duracion_esperar( aleatorio<500,600>() );
 
   mtx.lock();
-  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Creciendole el pelo..." << endl;
+  std::cout << std::string( 15, ' ' )
+    << " Cliente" << i
+      << ": Creciendole el pelo..."
+        << endl;
   mtx.unlock();
   this_thread::sleep_for( duracion_esperar );
   mtx.lock();
-  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Me ha crecido el pelo, voy a pelarme" << endl;
+  std::cout << std::string( 15, ' ' )
+    << " Cliente" << i
+      << ": Me ha crecido el pelo, voy a pelarme"
+        << endl;
   mtx.unlock();
 }
 
@@ -39,89 +46,124 @@ void cortarPeloACliente(int i){
   chrono::milliseconds duracion_esperar( aleatorio<100,200>() );
 
   mtx.lock();
-  std::cout << "Barbero"<< i << ": Pelando..." << endl;
+  std::cout << "Barbero"<< i
+    << ": Pelando..." << endl;
   mtx.unlock();
   this_thread::sleep_for( duracion_esperar );
   mtx.lock();
-  std::cout << "Barbero"<< i << ": Pelado ºlisto" << endl;
+  std::cout << "Barbero"<< i
+    << ": Pelado listo" << endl;
   mtx.unlock();
 }
 
 //Monitor para gestionar el acceso a una barbería-------------------------------
 class Barberia : public HoareMonitor{
 private:
+  unsigned contador_clientes_x_barbero[num_barberos];
   CondVar c_clientes, c_barbero, c_cliente_pelandose;   //Condiciones
 public:
   Barberia();
 
   void siguienteCliente(int i);
   void cortarPelo(int i);
-  void finCliente(int i);
+  bool finCliente(int i);
 };
 
 //Implementación de los metodos de la barbería----------------------------------
 Barberia::Barberia(){
+  for (size_t i = 0; i < num_barberos; i++) {
+    contador_clientes_x_barbero[i] = 0;
+  }
   c_clientes = newCondVar();
   c_barbero = newCondVar();
   c_cliente_pelandose = newCondVar();
 }
 
 void Barberia::siguienteCliente(int i){
-  if (c_clientes.get_nwt() == 0) {                                                     //Si no hay ningun cliente, el barbero se duerme
+  if (c_clientes.get_nwt() == 0) {                          //Si no hay ningun cliente, el barbero se duerme
     mtx.lock();
-    std::cout << "Barbero"<< i << ": No hay ningun cliente, me duermo zzz..." << endl;
+    std::cout << "Barbero" << i
+      << ": No hay ningun cliente, me duermo zzz..."
+        << endl;
     mtx.unlock();
     c_barbero.wait();
     mtx.lock();
-    std::cout << "Barbero"<< i << ": Buenos días zzz... Pase pase" << endl;
+    std::cout << "Barbero" << i
+      << ": Buenos días zzz... Pase pase"
+        << endl;
     mtx.unlock();
   }
   else{
     mtx.lock();
-    std::cout << "Barbero"<< i << ": Que pase el siguiente cliente!" << endl;
+    std::cout << "Barbero" << i
+      << ": Que pase el siguiente cliente!"
+        << endl;
     mtx.unlock();
-    c_clientes.signal();
-  }                                                          //El barbero avisa al siguiente cliente para que pase
+    c_clientes.signal();                                    //El barbero avisa al siguiente cliente para que pase
+  }
 }
 
 void Barberia::cortarPelo(int i) {
   mtx.lock();
-  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Buenos dias!" << endl;
+  std::cout << std::string( 15, ' ' )
+    << " Cliente" << i
+      << ": Buenos dias!" << endl;
   mtx.unlock();
   if (c_barbero.get_nwt() != 0)
-    c_barbero.signal();                                                         //El cliente despierta al barbero en caso de que este dormido
+    c_barbero.signal();                                     //El cliente despierta al barbero en caso de que este dormido
   else{
     if (c_clientes.get_nwt() >= tamanio_sala) {
       mtx.lock();
-      std::cout << std::string( 15, ' ' ) << "Cliente" << i << ": Hay mucha cola, vuelvo luego!" << '\n';
+      std::cout << std::string( 15, ' ' )
+        << "Cliente" << i
+          << ": Hay mucha cola, vuelvo luego!"
+            << endl;
       mtx.unlock();
       return;
     }
     mtx.lock();
-    std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Entro a la sala de espera" << endl;         //El cliente espera a que el barberlo le de paso                                                            //El cliente notifica que está esperando
+    std::cout << std::string( 15, ' ' )
+      << " Cliente" << i
+        << ": Entro a la sala de espera"
+          << endl;                                          //El cliente espera a que el barberlo le de paso                                                            //El cliente notifica que está esperando
     mtx.unlock();
     c_clientes.wait();
   }
   mtx.lock();
-  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Pelándose..." << endl;
+  std::cout << std::string( 15, ' ' )
+    << " Cliente" << i << ": Pelándose..."
+      << endl;
   mtx.unlock();
-  c_cliente_pelandose.wait();                                                   //El cliente espera a que el barbero le pele
+  c_cliente_pelandose.wait();                               //El cliente espera a que el barbero le pele
   mtx.lock();
-  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Perfecto! Hasta luego!" << endl;
+  std::cout << std::string( 15, ' ' )
+    << " Cliente" << i
+      << ": Perfecto! Hasta luego!"
+        << endl;
   mtx.unlock();
 }
 
-void Barberia::finCliente(int i){
+bool Barberia::finCliente(int i){
+  contador_clientes_x_barbero[i]++;
   mtx.lock();
-  std::cout << "Barbero"<< i << ": Listo, le gusta como ha quedado?" << endl;
+  std::cout << "Barbero"<< i
+    << ": Listo, le gusta como ha quedado?"
+      << endl;
   mtx.unlock();
-  c_cliente_pelandose.signal();                                                 //El cliente ha sido pelado y sale de la barbería
+  c_cliente_pelandose.signal();                             //El cliente ha sido pelado y sale de la barbería
+
+  if(contador_clientes_x_barbero[i] >= max_clientes){
+    contador_clientes_x_barbero[i] = 0;
+    return true;
+  }
+  else
+    return false;
 }
 
 //Funciones que realizan el trabajo de cliente y barbero------------------------
 void hebra_cliente(MRef<Barberia> barberia, int i){
   while (true) {
-    barberia->cortarPelo(i);        //Ir a cortarse el pelo
+    barberia->cortarPelo(i);                                //Ir a cortarse el pelo
     esperarFueraBarberia(i);
   }
 }
@@ -130,7 +172,19 @@ void hebra_barbero(MRef<Barberia> barberia, int i){
   while (true) {
     barberia->siguienteCliente(i);
     cortarPeloACliente(i);
-    barberia->finCliente(i);
+    if(barberia->finCliente(i)){
+      mtx.lock();
+      std::cout << "Barbero" << i
+        << ": Estoy muy cansado, voy a descansar un ratito"
+          << endl;
+      mtx.unlock();
+      this_thread::sleep_for(std::chrono::seconds(2));
+
+      mtx.lock();
+      std::cout << "Barbero" << i
+        << ": Ya he descansado, a trabajar!"
+          << endl;
+    }
   }
 }
 
