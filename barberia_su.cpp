@@ -27,11 +27,11 @@ void esperarFueraBarberia(int i){
   chrono::milliseconds duracion_esperar( aleatorio<500,600>() );
 
   mtx.lock();
-  std::cout << "                                    Cliente" << i << ": Creciendole el pelo..." << endl;
+  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Creciendole el pelo..." << endl;
   mtx.unlock();
   this_thread::sleep_for( duracion_esperar );
   mtx.lock();
-  std::cout << "                                    Cliente" << i << ": Me ha crecido el pelo, voy a pelarme" << endl;
+  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Me ha crecido el pelo, voy a pelarme" << endl;
   mtx.unlock();
 }
 
@@ -43,7 +43,7 @@ void cortarPeloACliente(int i){
   mtx.unlock();
   this_thread::sleep_for( duracion_esperar );
   mtx.lock();
-  std::cout << "Barbero"<< i << ": Pelado listo" << endl;
+  std::cout << "Barbero"<< i << ": Pelado ºlisto" << endl;
   mtx.unlock();
 }
 
@@ -86,28 +86,28 @@ void Barberia::siguienteCliente(int i){
 
 void Barberia::cortarPelo(int i) {
   mtx.lock();
-  std::cout << "                                    Cliente" << i << ": Buenos dias!" << endl;
+  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Buenos dias!" << endl;
   mtx.unlock();
   if (c_barbero.get_nwt() != 0)
     c_barbero.signal();                                                         //El cliente despierta al barbero en caso de que este dormido
   else{
     if (c_clientes.get_nwt() >= tamanio_sala) {
       mtx.lock();
-      std::cout << "                                   Cliente" << i << ": Hay mucha cola, vuelvo luego!" << '\n';
+      std::cout << std::string( 15, ' ' ) << "Cliente" << i << ": Hay mucha cola, vuelvo luego!" << '\n';
       mtx.unlock();
       return;
     }
     mtx.lock();
-    std::cout << "                                    Cliente" << i << ": Entro a la sala de espera" << endl;         //El cliente espera a que el barberlo le de paso                                                            //El cliente notifica que está esperando
+    std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Entro a la sala de espera" << endl;         //El cliente espera a que el barberlo le de paso                                                            //El cliente notifica que está esperando
     mtx.unlock();
     c_clientes.wait();
   }
   mtx.lock();
-  std::cout << "                                    Cliente" << i << ": Pelándose..." << endl;
+  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Pelándose..." << endl;
   mtx.unlock();
   c_cliente_pelandose.wait();                                                   //El cliente espera a que el barbero le pele
   mtx.lock();
-  std::cout << "                                    Cliente" << i << ": Perfecto! Hasta luego!" << endl;
+  std::cout << std::string( 15, ' ' ) << " Cliente" << i << ": Perfecto! Hasta luego!" << endl;
   mtx.unlock();
 }
 
