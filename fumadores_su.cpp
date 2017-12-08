@@ -32,9 +32,10 @@ void fumar(int num_fumador){
 
   // informa de que comienza a fumar
   mtx.lock();
-  cout << "Fumador " << num_fumador << "  :"
-         << " empieza a fumar (" << duracion_fumar.count() << " milisegundos)"
-          << endl;
+  cout << "Fumador" << num_fumador << ":"
+        << " empieza a fumar (" << duracion_fumar.count()
+          << " milisegundos)"
+            << endl;
   mtx.unlock();
 
   // espera bloqueada un tiempo igual a ''duracion_fumar' milisegundos
@@ -42,8 +43,9 @@ void fumar(int num_fumador){
 
   // informa de que ha terminado de fumar
   mtx.lock();
-  cout << "Fumador " << num_fumador
-          << "  : termina de fumar, comienza espera de ingrediente." << endl;
+  cout << "Fumador" << num_fumador
+          << ": termina de fumar, comienza espera de ingrediente."
+            << endl;
   mtx.unlock();
 }
 

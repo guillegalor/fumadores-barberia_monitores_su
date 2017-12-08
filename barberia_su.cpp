@@ -59,8 +59,9 @@ void cortarPeloACliente(int i){
 //Monitor para gestionar el acceso a una barbería-------------------------------
 class Barberia : public HoareMonitor{
 private:
-  unsigned contador_clientes_x_barbero[num_barberos];
-  CondVar c_clientes, c_barbero, c_cliente_pelandose;   //Condiciones
+  int siguiente_barbero;
+  unsigned clientes_x_barbero[num_barberos];
+  CondVar c_clientes, c_barbero, c_cliente_pelandose[num_barberos];   //Condiciones
 public:
   Barberia();
 
@@ -71,12 +72,13 @@ public:
 
 //Implementación de los metodos de la barbería----------------------------------
 Barberia::Barberia(){
+  siguiente_barbero = -1;
   for (size_t i = 0; i < num_barberos; i++) {
-    contador_clientes_x_barbero[i] = 0;
+    clientes_x_barbero[i] = 0;
+    c_cliente_pelandose[i] = newCondVar();
   }
   c_clientes = newCondVar();
   c_barbero = newCondVar();
-  c_cliente_pelandose = newCondVar();
 }
 
 void Barberia::siguienteCliente(int i){
@@ -92,6 +94,7 @@ void Barberia::siguienteCliente(int i){
       << ": Buenos días zzz... Pase pase"
         << endl;
     mtx.unlock();
+    siguiente_barbero = i;
   }
   else{
     mtx.lock();
@@ -99,6 +102,7 @@ void Barberia::siguienteCliente(int i){
       << ": Que pase el siguiente cliente!"
         << endl;
     mtx.unlock();
+    siguiente_barbero = i;
     c_clientes.signal();                                    //El barbero avisa al siguiente cliente para que pase
   }
 }
@@ -134,7 +138,7 @@ void Barberia::cortarPelo(int i) {
     << " Cliente" << i << ": Pelándose..."
       << endl;
   mtx.unlock();
-  c_cliente_pelandose.wait();                               //El cliente espera a que el barbero le pele
+  c_cliente_pelandose[siguiente_barbero].wait();               //El cliente espera a que el barbero le pele
   mtx.lock();
   std::cout << std::string( 15, ' ' )
     << " Cliente" << i
@@ -144,16 +148,16 @@ void Barberia::cortarPelo(int i) {
 }
 
 bool Barberia::finCliente(int i){
-  contador_clientes_x_barbero[i]++;
+  clientes_x_barbero[i]++;
   mtx.lock();
   std::cout << "Barbero"<< i
     << ": Listo, le gusta como ha quedado?"
       << endl;
   mtx.unlock();
-  c_cliente_pelandose.signal();                             //El cliente ha sido pelado y sale de la barbería
+  c_cliente_pelandose[i].signal();                             //El cliente ha sido pelado y sale de la barbería
 
-  if(contador_clientes_x_barbero[i] >= max_clientes){
-    contador_clientes_x_barbero[i] = 0;
+  if(clientes_x_barbero[i] >= max_clientes){
+    clientes_x_barbero[i] = 0;
     return true;
   }
   else
